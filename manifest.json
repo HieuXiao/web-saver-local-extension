@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Web Saver",
+  "version": "1.0.0",
+  "description": "Save and access your favourite website links with favicons and title display.",
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "Web Saver"
+  },
+  "permissions": [
+    "storage"
+  ]
+}
