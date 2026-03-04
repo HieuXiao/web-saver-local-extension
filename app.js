@@ -58,11 +58,73 @@
 
   const linksList = document.getElementById("links-list");
   const emptyMessage = document.getElementById("empty-message");
+  const filterContainer = document.getElementById("filter-container");
+  const searchInput = document.getElementById("search-input");
+
+  let currentFilter = "All";
+  let currentSearch = "";
+
+  searchInput.addEventListener("input", (e) => {
+    currentSearch = e.target.value.toLowerCase().trim();
+    renderLinks();
+  });
+
+  function renderFilterButtons(links) {
+    const labels = new Set(links.map((l) => l.label).filter((l) => l));
+    const sortedLabels = ["All", ...Array.from(labels).sort()];
+
+    // Reset filter if active label no longer exists
+    if (!sortedLabels.includes(currentFilter)) {
+      currentFilter = "All";
+    }
+
+    filterContainer.innerHTML = "";
+
+    // Hide if no labels (only "All")
+    if (sortedLabels.length <= 1) {
+      filterContainer.style.display = "none";
+      return;
+    }
+    filterContainer.style.display = "flex";
+
+    sortedLabels.forEach((label) => {
+      const btn = document.createElement("button");
+      btn.className = `filter-btn ${label === currentFilter ? "active" : ""}`;
+      btn.textContent = label;
+      btn.addEventListener("click", () => {
+        currentFilter = label;
+        renderLinks();
+      });
+      filterContainer.appendChild(btn);
+    });
+  }
 
   function renderLinks() {
-    const links = loadLinks();
+    const allLinks = loadLinks();
+    renderFilterButtons(allLinks);
+
+    const links = allLinks.filter((link) => {
+      const matchesFilter =
+        currentFilter === "All" || link.label === currentFilter;
+      const matchesSearch =
+        !currentSearch ||
+        link.title.toLowerCase().includes(currentSearch) ||
+        link.url.toLowerCase().includes(currentSearch);
+      return matchesFilter && matchesSearch;
+    });
+
     linksList.innerHTML = "";
-    emptyMessage.style.display = links.length === 0 ? "block" : "none";
+
+    if (links.length === 0) {
+      emptyMessage.style.display = "block";
+      if (currentFilter !== "All" || currentSearch) {
+        emptyMessage.textContent = "No matches found";
+      } else {
+        emptyMessage.textContent = "No saved links yet";
+      }
+    } else {
+      emptyMessage.style.display = "none";
+    }
 
     links.forEach((link) => {
       const li = document.createElement("li");
