@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web Saver</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🔖 Web Saver</h1>
+        <p class="subtitle">Save and access your favourite links</p>
+      </header>
+
+      <form id="add-form" novalidate>
+        <div class="input-group">
+          <input
+            id="url-input"
+            type="url"
+            placeholder="https://example.com"
+            autocomplete="off"
+            required
+          />
+          <input
+            id="title-input"
+            type="text"
+            placeholder="Title (optional)"
+            autocomplete="off"
+          />
+          <button type="submit" class="btn btn-primary">Add</button>
+        </div>
+        <p id="form-error" class="error" aria-live="polite"></p>
+      </form>
+
+      <section id="links-section">
+        <p id="empty-message" class="empty-message">No links saved yet.</p>
+        <ul id="links-list" aria-label="Saved links"></ul>
+      </section>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
