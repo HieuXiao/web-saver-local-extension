@@ -9,32 +9,58 @@
   <body>
     <div class="container">
       <header>
-        <h1>🔖 Web Saver</h1>
-        <p class="subtitle">Save and access your favourite links</p>
+        <div class="logo">🔖</div>
+        <div class="header-text">
+          <h1>Web Saver</h1>
+          <p class="subtitle">Quick save your favorite links</p>
+        </div>
       </header>
 
       <form id="add-form" novalidate>
-        <div class="input-group">
+        <div class="form-row">
           <input
             id="url-input"
             type="url"
-            placeholder="https://example.com"
+            placeholder="Enter URL or click +Page"
             autocomplete="off"
             required
           />
+          <button type="button" id="add-current-btn" class="btn btn-icon" title="Add current page">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+          </button>
+        </div>
+        <div class="form-row">
           <input
             id="title-input"
             type="text"
             placeholder="Title (optional)"
             autocomplete="off"
+            class="input-title"
           />
-          <button type="submit" class="btn btn-primary">Add</button>
+          <input
+            id="label-input"
+            type="text"
+            placeholder="Label"
+            autocomplete="off"
+            class="input-label"
+            list="default-labels"
+          />
+          <datalist id="default-labels">
+            <option value="Work"></option>
+            <option value="Personal"></option>
+            <option value="News"></option>
+            <option value="Docs"></option>
+            <option value="Shop"></option>
+          </datalist>
         </div>
+        <button type="submit" class="btn btn-primary">Save Link</button>
         <p id="form-error" class="error" aria-live="polite"></p>
       </form>
 
       <section id="links-section">
-        <p id="empty-message" class="empty-message">No links saved yet.</p>
+        <p id="empty-message" class="empty-message">No saved links yet</p>
         <ul id="links-list" aria-label="Saved links"></ul>
       </section>
     </div>

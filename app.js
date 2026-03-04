@@ -81,15 +81,30 @@
       const info = document.createElement("div");
       info.className = "link-info";
 
+      const titleRow = document.createElement("div");
+      titleRow.className = "link-header";
+
       const title = document.createElement("div");
       title.className = "link-title";
       title.textContent = link.title;
 
+      titleRow.appendChild(title);
+
+      if (link.label) {
+        const labelEl = document.createElement("div");
+        labelEl.className = "link-label";
+        const labelText = document.createElement("span");
+        labelText.textContent = link.label;
+        labelEl.appendChild(labelText);
+        titleRow.appendChild(labelEl);
+      }
+
       const urlSpan = document.createElement("div");
       urlSpan.className = "link-url";
       urlSpan.textContent = link.url;
+      urlSpan.title = link.url;
 
-      info.appendChild(title);
+      info.appendChild(titleRow);
       info.appendChild(urlSpan);
 
       const actions = document.createElement("div");
@@ -121,12 +136,14 @@
 
   /* ── CRUD ────────────────────────────────────────────────── */
 
-  function addLink(url, customTitle) {
+  function addLink(url, customTitle, label) {
     const links = loadLinks();
     const entry = {
       id: crypto.randomUUID(),
       url,
       title: customTitle.trim() || deriveTitle(url),
+      label: label.trim(),
+      createdAt: Date.now(),
     };
     links.unshift(entry);
     saveLinks(links);
@@ -144,6 +161,7 @@
   const form = document.getElementById("add-form");
   const urlInput = document.getElementById("url-input");
   const titleInput = document.getElementById("title-input");
+  const labelInput = document.getElementById("label-input");
   const formError = document.getElementById("form-error");
 
   form.addEventListener("submit", (e) => {
@@ -170,11 +188,42 @@
       return;
     }
 
-    addLink(normalizedUrl, titleInput.value);
+    addLink(normalizedUrl, titleInput.value, labelInput.value);
     urlInput.value = "";
     titleInput.value = "";
+    labelInput.value = "";
     urlInput.focus();
   });
+
+  /* ── Auto-fill current tab URL ───────────────────────────── */
+
+  const addCurrentBtn = document.getElementById("add-current-btn");
+
+  if (addCurrentBtn) {
+    addCurrentBtn.addEventListener("click", async () => {
+      formError.textContent = "";
+      try {
+        // Check if Chrome extension API is available
+        if (typeof chrome !== "undefined" && chrome.tabs && chrome.tabs.query) {
+          const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+          const tab = tabs[0];
+          if (tab && tab.url) {
+            urlInput.value = tab.url;
+            titleInput.value = tab.title || "";
+            urlInput.focus();
+          } else {
+            formError.textContent = "Cannot get URL from this tab.";
+          }
+        } else {
+          // Fallback for non-extension context (e.g., testing in browser)
+          formError.textContent = "Extension API not available.";
+        }
+      } catch (err) {
+        formError.textContent = "Failed to get current tab URL.";
+        console.error(err);
+      }
+    });
+  }
 
   /* ── Init ────────────────────────────────────────────────── */
   renderLinks();
