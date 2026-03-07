@@ -4,77 +4,102 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Web Saver</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div class="container">
-      <header>
-        <div class="logo">🔖</div>
-        <div class="header-text">
-          <h1>Web Saver</h1>
-        </div>
+    <div class="popup">
+      <!-- ── Section 1: Header ─────────────────────────────── -->
+      <header class="header">
+        <span class="header-title">Web Saver</span>
+        <button id="settings-btn" class="header-settings" title="Settings" aria-label="Settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="5" r="2"/>
+            <circle cx="12" cy="12" r="2"/>
+            <circle cx="12" cy="19" r="2"/>
+          </svg>
+        </button>
       </header>
 
-      <form id="add-form" novalidate>
-        <div class="form-row">
-          <input
-            id="url-input"
-            type="url"
-            placeholder="Enter URL or click +Page"
-            autocomplete="off"
-            required
-          />
-          <button type="button" id="add-current-btn" class="btn btn-icon" title="Add current page">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 5v14M5 12h14"/>
-            </svg>
-          </button>
-        </div>
-        <div class="form-row">
-          <input
-            id="title-input"
-            type="text"
-            placeholder="Title (optional)"
-            autocomplete="off"
-            class="input-title"
-          />
-          <input
-            id="label-input"
-            type="text"
-            placeholder="Label"
-            autocomplete="off"
-            class="input-label"
-            list="default-labels"
-          />
-          <datalist id="default-labels">
-            <option value="Work"></option>
-            <option value="Personal"></option>
-            <option value="News"></option>
-            <option value="Docs"></option>
-            <option value="Shop"></option>
-          </datalist>
-        </div>
-        <button type="submit" class="btn btn-primary">Save Link</button>
-        <p id="form-error" class="error" aria-live="polite"></p>
-      </form>
-
-      <div class="search-container">
-        <input
-          id="search-input"
-          type="search"
-          placeholder="Search links..."
-          autocomplete="off"
-        />
-        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-        </svg>
+      <!-- ── Quick Save ───────────────────────────────────── -->
+      <div class="quick-save">
+        <button id="quick-save-btn" class="quick-save__btn" type="button">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
+            <line x1="12" y1="8" x2="12" y2="14"/>
+            <line x1="9" y1="11" x2="15" y2="11"/>
+          </svg>
+          <span class="quick-save__label">Save this page</span>
+        </button>
+        <span id="quick-save-msg" class="quick-save__msg"></span>
       </div>
 
-      <div id="filter-container" class="filter-container"></div>
+      <!-- ── Section 2: Add Link ───────────────────────────── -->
+      <section class="add-section">
+        <form id="add-form" novalidate>
+          <div class="form-main">
+            <input
+              id="url-input"
+              type="url"
+              placeholder="Paste a URL…"
+              autocomplete="off"
+              required
+            />
+            <button type="button" id="add-current-btn" class="form-submit" title="Add current page" aria-label="Add current page">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+            </button>
+            <button type="submit" class="sr-only" tabindex="-1" aria-hidden="true">Save</button>
+          </div>
+          <div class="form-optional">
+            <input
+              id="title-input"
+              type="text"
+              placeholder="Title"
+              autocomplete="off"
+            />
+            <div class="dropdown-wrap">
+              <input
+                id="label-input"
+                type="text"
+                placeholder="Label"
+                autocomplete="off"
+              />
+              <div id="label-dropdown" class="dropdown-menu"></div>
+            </div>
+          </div>
+          <p id="form-error" class="error" aria-live="polite"></p>
+        </form>
+      </section>
 
-      <section id="links-section">
-        <p id="empty-message" class="empty-message">No saved links yet</p>
-        <ul id="links-list" aria-label="Saved links"></ul>
+      <!-- ── Section 3: Saved Links ────────────────────────── -->
+      <section class="links-section">
+        <div class="links-toolbar">
+          <div class="search-box">
+            <svg class="search-box__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input
+              id="search-input"
+              type="search"
+              placeholder="Search…"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+
+        <div id="filter-container" class="filter-bar"></div>
+
+        <div class="links-list-wrapper">
+          <p id="empty-message" class="empty-state">No saved links yet</p>
+          <ul id="links-list" aria-label="Saved links"></ul>
+        </div>
       </section>
     </div>
 
