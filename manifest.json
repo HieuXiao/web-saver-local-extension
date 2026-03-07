@@ -8,6 +8,8 @@
     "default_title": "Web Saver"
   },
   "permissions": [
-    "storage"
+    "storage",
+    "activeTab",
+    "tabs"
   ]
 }
