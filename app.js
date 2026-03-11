@@ -56,14 +56,17 @@
   }
 
   /**
-   * Collect all unique labels (defaults + user-created from saved links).
+   * Collect all unique labels sorted by recently used first.
    * @returns {string[]}
    */
   function getAllLabels() {
-    const userLabels = loadLinks()
-      .map((l) => l.label)
-      .filter((l) => l && !DEFAULT_LABELS.includes(l));
-    return [...DEFAULT_LABELS, ...new Set(userLabels)];
+    const recentLabels = new Set(
+      loadLinks()
+        .map((l) => l.label)
+        .filter((l) => l)
+    );
+    DEFAULT_LABELS.forEach((l) => recentLabels.add(l));
+    return Array.from(recentLabels);
   }
 
   /**
@@ -74,6 +77,11 @@
    */
   function setupDropdown(input, menuEl) {
     let activeIndex = -1;
+    // Move the menu up to the .popup root so it escapes hidden overflow of inner containers
+    const popupEl = document.querySelector(".popup");
+    if (menuEl.parentElement !== popupEl) {
+      popupEl.appendChild(menuEl);
+    }
 
     function render(filter = "") {
       const labels = getAllLabels().filter((l) =>
@@ -93,15 +101,61 @@
           e.preventDefault(); // prevent input blur
           input.value = label;
           hide();
-          input.dispatchEvent(new Event("input"));
+          input.dispatchEvent(new CustomEvent("input", { detail: { fromDropdown: true } }));
         });
         menuEl.appendChild(item);
       });
     }
 
+    function updatePosition() {
+      // Calculate position relative to the popup container
+      const inputRect = input.getBoundingClientRect();
+      const popupRect = popupEl.getBoundingClientRect();
+      
+      const leftPos = inputRect.left - popupRect.left;
+      
+      // Calculate space below and above
+      const spaceBelow = popupRect.bottom - inputRect.bottom;
+      const spaceAbove = inputRect.top - popupRect.top;
+      
+      const maxDropdownHeight = 140; // max-height defined in CSS
+      
+      let topPos;
+      
+      // Only pop upwards if there is clearly not enough space BELOW and there is more space ABOVE
+      if (spaceBelow < maxDropdownHeight && spaceAbove > spaceBelow) {
+        // Pop upwards
+        // Place bottom of dropdown just above the input top
+        
+        // We need to set bottom relative to popup height or top
+        // To use 'top', it should be: input top relative to popup - dropdown height
+        // But height might vary. To let auto height work up to max-height, we can set flex or max-height
+        const availableHeightAbove = spaceAbove - 5;
+        const actualMaxHeight = Math.min(maxDropdownHeight, availableHeightAbove);
+        
+        // Remove direct top if we are placing bottom upwards, but standard positioning uses top.
+        // It's cleaner to reset top/bottom.
+        menuEl.style.top = 'auto';
+        menuEl.style.bottom = `${popupRect.bottom - inputRect.top + 2}px`;
+        menuEl.style.maxHeight = `${actualMaxHeight}px`;
+      } else {
+        // Pop downwards (default)
+        topPos = inputRect.bottom - popupRect.top + 2; 
+        const availableHeightBelow = spaceBelow - 5;
+        
+        menuEl.style.bottom = 'auto';
+        menuEl.style.top = `${topPos}px`;
+        menuEl.style.maxHeight = `${Math.min(maxDropdownHeight, Math.max(80, availableHeightBelow))}px`; // Ensure at least 80px if squeezing
+      }
+      
+      menuEl.style.left = `${leftPos}px`;
+      menuEl.style.width = `${inputRect.width}px`;
+    }
+
     function show() {
       activeIndex = -1;
       render(input.value);
+      updatePosition();
       menuEl.classList.add("dropdown-menu--open");
     }
 
@@ -119,9 +173,10 @@
       setTimeout(hide, 120);
     }
 
-    function onInput() {
+    function onInput(e) {
       activeIndex = -1;
       render(input.value);
+      if (e && e.detail && e.detail.fromDropdown) return;
       if (!menuEl.classList.contains("dropdown-menu--open")) {
         menuEl.classList.add("dropdown-menu--open");
       }
@@ -152,6 +207,12 @@
     input.addEventListener("blur", onBlur);
     input.addEventListener("input", onInput);
     input.addEventListener("keydown", onKeydown);
+    
+    // Update position if the user scrolls the wrapper
+    const listWrapper = document.querySelector(".links-list-wrapper");
+    if (listWrapper) {
+      listWrapper.addEventListener("scroll", updatePosition);
+    }
 
     return {
       destroy() {
@@ -159,7 +220,12 @@
         input.removeEventListener("blur", onBlur);
         input.removeEventListener("input", onInput);
         input.removeEventListener("keydown", onKeydown);
+        if (listWrapper) {
+          listWrapper.removeEventListener("scroll", updatePosition);
+        }
         hide();
+        // optionally remove menuEl from DOM
+        menuEl.remove();
       },
     };
   }
@@ -221,7 +287,7 @@
         link.title.toLowerCase().includes(currentSearch) ||
         link.url.toLowerCase().includes(currentSearch);
       return matchesFilter && matchesSearch;
-    });
+    }).sort((a, b) => a.title.localeCompare(b.title));
 
     linksList.innerHTML = "";
 
@@ -268,21 +334,21 @@
       const actions = document.createElement("div");
       actions.className = "link-actions";
 
-      const openBtn = document.createElement("button");
-      openBtn.className = "link-action link-action--open";
-      openBtn.setAttribute("aria-label", `Open ${link.title}`);
-      openBtn.title = "Open link";
-      openBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
-      openBtn.addEventListener("click", (e) => {
+      const editTitleBtn = document.createElement("button");
+      editTitleBtn.className = "link-action link-action--edit-title";
+      editTitleBtn.setAttribute("aria-label", `Edit title for ${link.title}`);
+      editTitleBtn.title = "Edit title";
+      editTitleBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`;
+      editTitleBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        window.open(link.url, "_blank", "noopener,noreferrer");
+        showTitleEditor(li, link);
       });
 
       const editBtn = document.createElement("button");
       editBtn.className = "link-action link-action--edit";
       editBtn.setAttribute("aria-label", `Edit label for ${link.title}`);
       editBtn.title = "Edit label";
-      editBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-1.42.59H8v-4a2 2 0 01.59-1.42l7.17-7.17"/><path d="M15 5l4 4"/><path d="M13.5 6.5l4 4"/></svg>`;
+      editBtn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`;
       editBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         showLabelEditor(li, link);
@@ -298,7 +364,7 @@
         deleteLink(link.id);
       });
 
-      actions.appendChild(openBtn);
+      actions.appendChild(editTitleBtn);
       actions.appendChild(editBtn);
       actions.appendChild(deleteBtn);
 
@@ -343,6 +409,16 @@
     const link = links.find((l) => l.id === id);
     if (link) {
       link.label = newLabel.trim();
+      saveLinks(links);
+      renderLinks();
+    }
+  }
+
+  function updateTitle(id, newTitle) {
+    const links = loadLinks();
+    const link = links.find((l) => l.id === id);
+    if (link) {
+      link.title = newTitle.trim() || deriveTitle(link.url);
       saveLinks(links);
       renderLinks();
     }
@@ -395,7 +471,7 @@
     li.appendChild(saveBtn);
     li.appendChild(cancelBtn);
 
-    // Wire up custom dropdown
+    // Wire up custom dropdown FIRST, so its Enter listener runs before our form submit listener
     const editorDropdown = setupDropdown(input, editorMenu);
 
     // Focus input
@@ -432,6 +508,78 @@
     });
 
     // Prevent clicks inside editor from doing anything else
+    li.addEventListener("click", (e) => e.stopPropagation(), { once: false });
+  }
+
+  /**
+   * Show an inline title editor inside a link item.
+   * @param {HTMLElement} li - the link-item element
+   * @param {object} link - the link data object
+   */
+  function showTitleEditor(li, link) {
+    li.dataset.editing = "true";
+
+    li.innerHTML = "";
+    li.className = "link-item link-item--editing";
+
+    const editorLabel = document.createElement("span");
+    editorLabel.className = "label-editor__label";
+    editorLabel.textContent = "Title:";
+
+    const input = document.createElement("input");
+    input.className = "label-editor__input";
+    input.type = "text";
+    input.value = link.title || "";
+    input.placeholder = "Enter title…";
+
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "label-editor__btn label-editor__btn--save";
+    saveBtn.textContent = "Save";
+    saveBtn.type = "button";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.className = "label-editor__btn label-editor__btn--cancel";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.type = "button";
+
+    li.appendChild(editorLabel);
+    li.appendChild(input);
+    li.appendChild(saveBtn);
+    li.appendChild(cancelBtn);
+
+    requestAnimationFrame(() => {
+      input.focus();
+      input.select();
+    });
+
+    function save() {
+      updateTitle(link.id, input.value);
+    }
+
+    function cancel() {
+      renderLinks();
+    }
+
+    saveBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      save();
+    });
+
+    cancelBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      cancel();
+    });
+
+    input.addEventListener("keydown", (e) => {
+      e.stopPropagation();
+      if (e.key === "Enter") {
+        e.preventDefault();
+        save();
+      } else if (e.key === "Escape") {
+        cancel();
+      }
+    });
+
     li.addEventListener("click", (e) => e.stopPropagation(), { once: false });
   }
 
@@ -483,7 +631,14 @@
   const addCurrentBtn = document.getElementById("add-current-btn");
 
   if (addCurrentBtn) {
-    addCurrentBtn.addEventListener("click", async () => {
+    addCurrentBtn.addEventListener("click", async (e) => {
+      // If the user already pasted a URL, treat this button as a manual "Save" submit button
+      if (urlInput && urlInput.value.trim() !== "") {
+        e.preventDefault();
+        form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+        return;
+      }
+
       formError.textContent = "";
       try {
         if (typeof chrome !== "undefined" && chrome.tabs && chrome.tabs.query) {
@@ -555,7 +710,13 @@
           return;
         }
 
-        addLink(tab.url, tab.title || "", "");
+        const labelVal = document.getElementById("label-input")?.value || "";
+        addLink(tab.url, tab.title || "", labelVal);
+        
+        // Clear label input after quick saving
+        const labelInputEl = document.getElementById("label-input");
+        if (labelInputEl) labelInputEl.value = "";
+        
         showQuickMsg("Saved ✓", "success");
       } catch (err) {
         showQuickMsg("Failed to save", "error");
